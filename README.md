@@ -1,5 +1,7 @@
 # ASAPNotes
 
+![ASAPNotes Logo](ASAP_EinStein.png)
+
 A lightweight, Markdown-first note-taking desktop application built in Go with a web-based interface. Features local plain-text storage, real-time auto-save, intelligent auto-shutdown, and a distraction-free writing environment.
 
 ## ✨ Features
