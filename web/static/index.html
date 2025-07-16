@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASAPNote</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <button id="hamburger-menu">☰</button>
+      <input type="text" id="search" placeholder="Search notes...">
+      <button id="new-note">New Note</button>
+      <div id="folders"></div>
+    </aside>
+    <div id="resizer-1" class="resizer"></div>
+    <main id="main">
+      <div id="editor-container">
+        <textarea id="editor" spellcheck="true" placeholder="Write your Markdown note here..."></textarea>
+      </div>
+      <div id="resizer-2" class="resizer"></div>
+      <div id="preview"></div>
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button id="close-modal" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label for="notes-folder">Notes Folder:</label>
+          <input type="text" id="notes-folder" placeholder="Enter notes folder path">
+          <button id="update-folder">Update Folder</button>
+        </div>
+        <div class="setting-group">
+          <label>Theme:</label>
+          <button id="theme-toggle">🌙 Light Mode</button>
+        </div>
+        <div class="setting-group">
+          <button id="close-app" class="danger-btn">Close ASAPNotes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html> 
