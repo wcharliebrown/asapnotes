@@ -48,13 +48,62 @@ function applyFontSettings(fontFamily, fontSize) {
       font-family: ${fontFamily} !important;
       font-size: ${fontSize}px !important;
     }
-    #preview p, #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6, #preview li, #preview blockquote, #preview td, #preview th {
+    #preview p, #preview li, #preview blockquote, #preview td, #preview th {
       font-family: ${fontFamily} !important;
       font-size: ${fontSize}px !important;
     }
-    body.dark #preview p, body.dark #preview h1, body.dark #preview h2, body.dark #preview h3, body.dark #preview h4, body.dark #preview h5, body.dark #preview h6, body.dark #preview li, body.dark #preview blockquote, body.dark #preview td, body.dark #preview th {
+    body.dark #preview p, body.dark #preview li, body.dark #preview blockquote, body.dark #preview td, body.dark #preview th {
       font-family: ${fontFamily} !important;
       font-size: ${fontSize}px !important;
+    }
+    /* Heading sizes relative to base font size */
+    #preview h1 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 2.5) !important;
+    }
+    #preview h2 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 2) !important;
+    }
+    #preview h3 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 1.75) !important;
+    }
+    #preview h4 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 1.5) !important;
+    }
+    #preview h5 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 1.25) !important;
+    }
+    #preview h6 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 1.1) !important;
+    }
+    body.dark #preview h1 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 2.5) !important;
+    }
+    body.dark #preview h2 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 2) !important;
+    }
+    body.dark #preview h3 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 1.75) !important;
+    }
+    body.dark #preview h4 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 1.5) !important;
+    }
+    body.dark #preview h5 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 1.25) !important;
+    }
+    body.dark #preview h6 {
+      font-family: ${fontFamily} !important;
+      font-size: calc(${fontSize}px * 1.1) !important;
     }
   `;
   
