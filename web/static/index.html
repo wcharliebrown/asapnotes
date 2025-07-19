@@ -11,7 +11,11 @@
     <aside id="sidebar">
       <button id="hamburger-menu">☰</button>
       <input type="text" id="search" placeholder="Search notes...">
-      <button id="new-note">New Note</button>
+      <div class="button-group">
+        <button id="new-note">New Note</button>
+        <button id="new-folder">New Folder</button>
+      </div>
+      <div id="current-folder"></div>
       <div id="folders"></div>
     </aside>
     <div id="resizer-1" class="resizer"></div>
@@ -40,6 +44,24 @@
         <div class="setting-group">
           <label>Theme:</label>
           <button id="theme-toggle">🌙 Light Mode</button>
+        </div>
+        <div class="setting-group">
+          <label for="font-family">Font Family:</label>
+          <select id="font-family">
+            <option value="monospace">Loading fonts...</option>
+          </select>
+        </div>
+        <div class="setting-group">
+          <label for="font-size">Font Size:</label>
+          <select id="font-size">
+            <option value="12">12px</option>
+            <option value="14">14px</option>
+            <option value="16">16px</option>
+            <option value="18">18px</option>
+            <option value="20">20px</option>
+            <option value="22">22px</option>
+            <option value="24">24px</option>
+          </select>
         </div>
         <div class="setting-group">
           <button id="close-app" class="danger-btn">Close ASAPNotes</button>

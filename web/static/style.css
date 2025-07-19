@@ -13,6 +13,8 @@ body {
   --link-color: #0077cc;
   --button-text: #222;
   --modal-border: transparent;
+  --editor-font-family: monospace;
+  --editor-font-size: 16px;
 }
 body.dark {
   --bg: #181a1b;
@@ -23,6 +25,46 @@ body.dark {
   --link-color: #4fa3ff;
   --button-text: #eee;
   --modal-border: #fff;
+  --editor-font-family: monospace;
+  --editor-font-size: 16px;
+}
+
+/* Ensure font settings work in both light and dark modes */
+body.dark #editor,
+body.dark #preview {
+  font-family: var(--editor-font-family) !important;
+  font-size: var(--editor-font-size) !important;
+}
+
+/* Additional dark mode font overrides */
+body.dark #editor {
+  font-family: var(--editor-font-family) !important;
+  font-size: var(--editor-font-size) !important;
+}
+
+body.dark #preview {
+  font-family: var(--editor-font-family) !important;
+  font-size: var(--editor-font-size) !important;
+}
+
+/* Force font application in dark mode with higher specificity */
+body.dark #editor,
+body.dark #preview,
+body.dark #editor *,
+body.dark #preview * {
+  font-family: var(--editor-font-family) !important;
+  font-size: var(--editor-font-size) !important;
+}
+
+/* Override any inline styles in dark mode */
+body.dark #editor[style*="font-family"],
+body.dark #preview[style*="font-family"] {
+  font-family: var(--editor-font-family) !important;
+}
+
+body.dark #editor[style*="font-size"],
+body.dark #preview[style*="font-size"] {
+  font-size: var(--editor-font-size) !important;
 }
 #app {
   display: flex;
@@ -59,16 +101,44 @@ body.dark {
   padding: 0.5em;
 }
 
-#new-note {
+.button-group {
+  display: flex;
+  gap: 0.5em;
   margin-bottom: 1em;
-  align-self: flex-end;
+}
+
+#new-note, #new-folder {
+  flex: 1;
   background: none;
   border: 1px solid #ccc;
-  font-size: 1em;
+  font-size: 0.9em;
   cursor: pointer;
   padding: 0.3em 0.8em;
   border-radius: 4px;
   color: var(--button-text);
+}
+
+#new-note:hover, #new-folder:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark #new-note:hover, body.dark #new-folder:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#current-folder {
+  font-size: 0.8em;
+  color: var(--fg);
+  opacity: 0.7;
+  margin-bottom: 0.5em;
+  padding: 0.3em;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  border-left: 3px solid var(--accent);
+}
+
+body.dark #current-folder {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* Modal Styles */
@@ -136,7 +206,8 @@ body.dark {
   font-weight: bold;
 }
 
-.setting-group input[type="text"] {
+.setting-group input[type="text"],
+.setting-group select {
   width: 100%;
   padding: 0.5em;
   margin-bottom: 0.5em;
@@ -145,6 +216,24 @@ body.dark {
   background: var(--bg);
   color: var(--fg);
   box-sizing: border-box;
+}
+
+.setting-group select {
+  cursor: pointer;
+}
+
+.setting-group select:hover {
+  border-color: var(--accent);
+}
+
+.setting-group select option {
+  padding: 0.5em;
+  font-size: 14px;
+}
+
+/* Font selector styling */
+#font-family option {
+  font-family: inherit;
 }
 
 .setting-group button {
@@ -174,6 +263,102 @@ body.dark {
   flex: 1;
   overflow-y: auto;
 }
+
+/* Folder Navigation Styles */
+.folder-header {
+  display: flex;
+  align-items: center;
+  padding: 0.3em 0;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 4px;
+  margin: 0.1em 0;
+}
+
+.folder-header:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark .folder-header:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.folder-header.selected {
+  background: var(--accent);
+  color: white;
+}
+
+.folder-header.selected .folder-name,
+.folder-header.selected .folder-toggle {
+  color: white;
+}
+
+.folder-header.selected:hover {
+  background: var(--accent);
+  opacity: 0.9;
+}
+
+.folder-toggle {
+  font-size: 0.8em;
+  margin-right: 0.3em;
+  color: var(--fg);
+  min-width: 1em;
+  text-align: center;
+}
+
+.folder-icon {
+  margin-right: 0.3em;
+  font-size: 1.1em;
+}
+
+.folder-name {
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.folder-content {
+  margin-left: 1.5em;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  padding-left: 0.5em;
+}
+
+body.dark .folder-content {
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+.subfolder {
+  margin: 0.2em 0;
+}
+
+.notes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.2em 0;
+}
+
+.notes-list li {
+  margin: 0.1em 0;
+  padding: 0.2em 0;
+}
+
+.notes-list li a {
+  display: block;
+  padding: 0.2em 0.5em;
+  border-radius: 3px;
+  text-decoration: none;
+  color: var(--link-color);
+  font-size: 0.9em;
+}
+
+.notes-list li a:hover {
+  background: rgba(0, 0, 0, 0.05);
+  text-decoration: none;
+}
+
+body.dark .notes-list li a:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 #folders a {
   color: var(--link-color);
   text-decoration: none;
@@ -200,8 +385,8 @@ body.dark {
 #editor {
   flex: 1;
   width: 100%;
-  font-size: 1em;
-  font-family: monospace;
+  font-size: var(--editor-font-size);
+  font-family: var(--editor-font-family);
   margin-bottom: 1em;
   background: var(--bg);
   color: var(--fg);
@@ -217,6 +402,8 @@ body.dark {
   color: var(--fg);
   min-width: 200px;
   flex-basis: 50%;
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-font-size);
 }
 
 /* Markdown Preview Styles */

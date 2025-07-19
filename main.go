@@ -19,6 +19,8 @@ import (
 
 type Settings struct {
 	NotesFolder string `json:"notes_folder"`
+	FontFamily  string `json:"font_family"`
+	FontSize    string `json:"font_size"`
 }
 
 var settings Settings
@@ -50,6 +52,8 @@ func loadSettings() {
 		homeDir, _ := os.UserHomeDir()
 		settings = Settings{
 			NotesFolder: filepath.Join(homeDir, "Documents", "ASAPNotes"),
+			FontFamily:  "monospace",
+			FontSize:    "16",
 		}
 		saveSettings()
 		return
@@ -86,6 +90,7 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(webPath))))
 	http.HandleFunc("/api/folders", handleFolders)
 	http.HandleFunc("/api/note", handleNote)
+	http.HandleFunc("/api/folder", handleFolder)
 	http.HandleFunc("/api/search", handleSearch)
 	http.HandleFunc("/api/settings", handleSettings)
 	http.HandleFunc("/api/shutdown", handleShutdown)
@@ -199,7 +204,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		
-		// Validate and create notes folder
+		// Update notes folder if provided
 		if newSettings.NotesFolder != "" {
 			if _, err := os.Stat(newSettings.NotesFolder); os.IsNotExist(err) {
 				if err := os.MkdirAll(newSettings.NotesFolder, 0755); err != nil {
@@ -209,9 +214,17 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			settings.NotesFolder = newSettings.NotesFolder
-			saveSettings()
 		}
 		
+		// Update font settings if provided
+		if newSettings.FontFamily != "" {
+			settings.FontFamily = newSettings.FontFamily
+		}
+		if newSettings.FontSize != "" {
+			settings.FontSize = newSettings.FontSize
+		}
+		
+		saveSettings()
 		w.Write([]byte("OK"))
 	}
 }
@@ -300,6 +313,40 @@ func handleNote(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write([]byte("OK"))
 	}
+}
+
+// handleFolder creates a new folder
+func handleFolder(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.WriteHeader(405)
+		return
+	}
+	
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		w.WriteHeader(400)
+		w.Write([]byte("Folder path is required"))
+		return
+	}
+	
+	// Ensure the path is relative to the notes folder
+	if filepath.IsAbs(path) {
+		w.WriteHeader(400)
+		w.Write([]byte("Folder path must be relative"))
+		return
+	}
+	
+	fullPath := filepath.Join(settings.NotesFolder, path)
+	
+	// Create the folder
+	err := os.MkdirAll(fullPath, 0755)
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte("Failed to create folder"))
+		return
+	}
+	
+	w.Write([]byte("OK"))
 }
 
 // handleSearch performs a simple full-text search

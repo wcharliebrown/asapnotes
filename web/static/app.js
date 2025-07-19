@@ -1,21 +1,103 @@
+// --- Settings Management ---
+let currentSettings = {};
+
 // --- Theme Toggle ---
 const themeBtn = document.getElementById('theme-toggle');
 const setTheme = (dark) => {
   document.body.classList.toggle('dark', dark);
   themeBtn.textContent = dark ? '☀️ Dark Mode' : '🌙 Light Mode';
   localStorage.setItem('theme', dark ? 'dark' : 'light');
+  
+  console.log('Theme changed to:', dark ? 'dark' : 'light');
+  
+  // Re-apply font settings when theme changes
+  if (currentSettings && currentSettings.font_family && currentSettings.font_size) {
+    console.log('Re-applying font settings after theme change');
+    // Delay slightly to ensure DOM is updated
+    setTimeout(() => {
+      applyFontSettings(currentSettings.font_family, currentSettings.font_size);
+    }, 50);
+  }
 };
 themeBtn.onclick = () => setTheme(!document.body.classList.contains('dark'));
 setTheme(localStorage.getItem('theme') === 'dark');
 
-// --- Settings Management ---
-let currentSettings = {};
+// Font settings functions (moved up to avoid reference errors)
+function applyFontSettings(fontFamily, fontSize) {
+  console.log('Applying font settings:', fontFamily, fontSize);
+  
+  // Update CSS variables
+  document.documentElement.style.setProperty('--editor-font-family', fontFamily);
+  document.documentElement.style.setProperty('--editor-font-size', fontSize + 'px');
+  
+  // Create or update dynamic style tag for maximum override
+  let dynamicStyle = document.getElementById('dynamic-font-style');
+  if (!dynamicStyle) {
+    dynamicStyle = document.createElement('style');
+    dynamicStyle.id = 'dynamic-font-style';
+    document.head.appendChild(dynamicStyle);
+  }
+  
+  // Add CSS rules that override everything
+  dynamicStyle.textContent = `
+    #editor, #preview {
+      font-family: ${fontFamily} !important;
+      font-size: ${fontSize}px !important;
+    }
+    body.dark #editor, body.dark #preview {
+      font-family: ${fontFamily} !important;
+      font-size: ${fontSize}px !important;
+    }
+    #preview p, #preview h1, #preview h2, #preview h3, #preview h4, #preview h5, #preview h6, #preview li, #preview blockquote, #preview td, #preview th {
+      font-family: ${fontFamily} !important;
+      font-size: ${fontSize}px !important;
+    }
+    body.dark #preview p, body.dark #preview h1, body.dark #preview h2, body.dark #preview h3, body.dark #preview h4, body.dark #preview h5, body.dark #preview h6, body.dark #preview li, body.dark #preview blockquote, body.dark #preview td, body.dark #preview th {
+      font-family: ${fontFamily} !important;
+      font-size: ${fontSize}px !important;
+    }
+  `;
+  
+  // Also apply directly to elements as fallback
+  const editor = document.getElementById('editor');
+  const preview = document.getElementById('preview');
+  
+  if (editor) {
+    editor.style.setProperty('font-family', fontFamily, 'important');
+    editor.style.setProperty('font-size', fontSize + 'px', 'important');
+  }
+  
+  if (preview) {
+    preview.style.setProperty('font-family', fontFamily, 'important');
+    preview.style.setProperty('font-size', fontSize + 'px', 'important');
+  }
+}
+
 function loadSettings() {
   fetch('/api/settings').then(r => r.json()).then(settings => {
     currentSettings = settings;
     console.log('Notes folder:', settings.notes_folder);
     // Update the notes folder input in the modal
     document.getElementById('notes-folder').value = settings.notes_folder || '';
+    
+    // Populate font selector with available fonts
+    setTimeout(() => {
+      populateFontSelector();
+      
+          // Update font settings after populating selector
+    setTimeout(() => {
+      document.getElementById('font-family').value = settings.font_family || 'monospace';
+      document.getElementById('font-size').value = settings.font_size || '16';
+      // Apply font settings
+      applyFontSettings(settings.font_family || 'monospace', settings.font_size || '16');
+      
+      // Also apply again after a longer delay to ensure everything is loaded
+      setTimeout(() => {
+        applyFontSettings(settings.font_family || 'monospace', settings.font_size || '16');
+      }, 500);
+    }, 200);
+    }, 100);
+    
     // Load folders after settings are loaded
     loadFolders();
   }).catch(error => {
@@ -31,13 +113,21 @@ const settingsModal = document.getElementById('settings-modal');
 const closeModal = document.getElementById('close-modal');
 const updateFolderBtn = document.getElementById('update-folder');
 
-hamburgerMenu.onclick = function() {
-  settingsModal.style.display = 'block';
-};
+if (hamburgerMenu) {
+  hamburgerMenu.onclick = function() {
+    if (settingsModal) {
+      settingsModal.style.display = 'block';
+    }
+  };
+}
 
-closeModal.onclick = function() {
-  settingsModal.style.display = 'none';
-};
+if (closeModal) {
+  closeModal.onclick = function() {
+    if (settingsModal) {
+      settingsModal.style.display = 'none';
+    }
+  };
+}
 
 // Close modal when clicking outside of it
 window.onclick = function(event) {
@@ -74,26 +164,260 @@ updateFolderBtn.onclick = function() {
   }
 };
 
+// Font settings event listeners
+const fontFamilySelect = document.getElementById('font-family');
+const fontSizeSelect = document.getElementById('font-size');
+
+if (fontFamilySelect) {
+  fontFamilySelect.addEventListener('change', function() {
+    const newFontFamily = this.value;
+    updateFontSettings({ font_family: newFontFamily });
+  });
+}
+
+if (fontSizeSelect) {
+  fontSizeSelect.addEventListener('change', function() {
+    const newFontSize = this.value;
+    updateFontSettings({ font_size: newFontSize });
+  });
+}
+
+// Font detection and population
+function populateFontSelector() {
+  console.log('Starting font population...');
+  
+  if (!fontFamilySelect) {
+    console.error('Font family select element not found');
+    return;
+  }
+  
+  // List of fonts to test, ordered by preference
+  const fontsToTest = [
+    { name: 'Monospace', value: 'monospace' },
+    { name: 'Menlo', value: "'Menlo', monospace" },
+    { name: 'Monaco', value: "'Monaco', monospace" },
+    { name: 'SF Mono', value: "'SF Mono', monospace" },
+    { name: 'Courier New', value: "'Courier New', monospace" },
+    { name: 'Consolas', value: "'Consolas', monospace" },
+    { name: 'Fira Code', value: "'Fira Code', monospace" },
+    { name: 'JetBrains Mono', value: "'JetBrains Mono', monospace" },
+    { name: 'Source Code Pro', value: "'Source Code Pro', monospace" },
+    { name: 'Ubuntu Mono', value: "'Ubuntu Mono', monospace" },
+    { name: 'DejaVu Sans Mono', value: "'DejaVu Sans Mono', monospace" },
+    { name: 'Inconsolata', value: "'Inconsolata', monospace" },
+    { name: 'Sans-serif', value: 'sans-serif' },
+    { name: 'SF Pro Display', value: "'SF Pro Display', sans-serif" },
+    { name: 'Helvetica Neue', value: "'Helvetica Neue', sans-serif" },
+    { name: 'Arial', value: "'Arial', sans-serif" },
+    { name: 'Helvetica', value: "'Helvetica', sans-serif" },
+    { name: 'Segoe UI', value: "'Segoe UI', sans-serif" },
+    { name: 'Serif', value: 'serif' },
+    { name: 'Times New Roman', value: "'Times New Roman', serif" },
+    { name: 'Georgia', value: "'Georgia', serif" }
+  ];
+
+  // Clear existing options
+  fontFamilySelect.innerHTML = '';
+
+  try {
+    // Test each font and add if available
+    fontsToTest.forEach(font => {
+      try {
+        if (isFontAvailable(font.value)) {
+          const option = document.createElement('option');
+          option.value = font.value;
+          option.textContent = font.name;
+          option.style.fontFamily = font.value;
+          fontFamilySelect.appendChild(option);
+          console.log('Font available:', font.name);
+        } else {
+          console.log('Font not available:', font.name);
+        }
+      } catch (e) {
+        console.log('Error testing font:', font.name, e);
+      }
+    });
+
+      // Always add basic fallbacks first
+  const fallbacks = [
+    { name: 'Monospace', value: 'monospace' },
+    { name: 'Sans-serif', value: 'sans-serif' },
+    { name: 'Serif', value: 'serif' }
+  ];
+  
+  // If no fonts were detected, add fallbacks
+  if (fontFamilySelect.children.length === 0) {
+    console.log('No fonts detected, adding fallbacks');
+    fallbacks.forEach(font => {
+      const option = document.createElement('option');
+      option.value = font.value;
+      option.textContent = font.name;
+      fontFamilySelect.appendChild(option);
+    });
+  }
+  
+  // Ensure we have at least the basic fonts
+  const hasMonospace = Array.from(fontFamilySelect.children).some(opt => opt.value === 'monospace');
+  const hasSansSerif = Array.from(fontFamilySelect.children).some(opt => opt.value === 'sans-serif');
+  const hasSerif = Array.from(fontFamilySelect.children).some(opt => opt.value === 'serif');
+  
+  if (!hasMonospace || !hasSansSerif || !hasSerif) {
+    console.log('Adding missing basic fonts');
+    fallbacks.forEach(font => {
+      const exists = Array.from(fontFamilySelect.children).some(opt => opt.value === font.value);
+      if (!exists) {
+        const option = document.createElement('option');
+        option.value = font.value;
+        option.textContent = font.name;
+        fontFamilySelect.appendChild(option);
+      }
+    });
+  }
+    
+    console.log('Font population complete. Found', fontFamilySelect.children.length, 'fonts');
+  } catch (e) {
+    console.error('Error in populateFontSelector:', e);
+    // Add basic fallbacks if everything fails
+    const fallbacks = [
+      { name: 'Monospace', value: 'monospace' },
+      { name: 'Sans-serif', value: 'sans-serif' },
+      { name: 'Serif', value: 'serif' }
+    ];
+    fallbacks.forEach(font => {
+      const option = document.createElement('option');
+      option.value = font.value;
+      option.textContent = font.name;
+      fontFamilySelect.appendChild(option);
+    });
+  }
+}
+
+function isFontAvailable(fontFamily) {
+  try {
+    // For generic font families, always return true
+    if (fontFamily === 'monospace' || fontFamily === 'sans-serif' || fontFamily === 'serif') {
+      return true;
+    }
+    
+    // For macOS, include common system fonts
+    const commonFonts = [
+      'Menlo', 'Monaco', 'SF Mono', 'SF Pro Display', 'Helvetica Neue', 'Arial', 'Times New Roman',
+      'Georgia', 'Courier New', 'Consolas', 'Segoe UI'
+    ];
+    
+    // Extract the actual font name (remove quotes and fallbacks)
+    const fontName = fontFamily.replace(/['"]/g, '').split(',')[0].trim();
+    
+    // If it's a common font, assume it's available
+    if (commonFonts.includes(fontName)) {
+      return true;
+    }
+    
+    // For other fonts, use canvas detection
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    // Test with a specific string that varies in width between fonts
+    const testString = 'mmmmmmmmmm';
+    
+    // Set initial font (monospace)
+    context.font = '12px monospace';
+    const initialWidth = context.measureText(testString).width;
+    
+    // Set test font
+    context.font = `12px ${fontFamily}`;
+    const testWidth = context.measureText(testString).width;
+    
+    // If the width is different, the font is available
+    const isDifferent = Math.abs(testWidth - initialWidth) > 1;
+    
+    return isDifferent;
+  } catch (e) {
+    console.log('Error in isFontAvailable for', fontFamily, ':', e);
+    // If there's an error, assume the font is available to be safe
+    return true;
+  }
+}
+
+function updateFontSettings(newSettings) {
+  const updatedSettings = { ...currentSettings, ...newSettings };
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updatedSettings)
+  })
+  .then(response => {
+    if (response.ok) {
+      // Update local settings
+      currentSettings = updatedSettings;
+      // Apply the new font settings
+      applyFontSettings(currentSettings.font_family || 'monospace', currentSettings.font_size || '16');
+      console.log('Font settings updated');
+    } else {
+      alert('Failed to update font settings');
+    }
+  })
+  .catch(error => {
+    console.error('Error updating font settings:', error);
+    alert('Failed to update font settings');
+  });
+}
+
 // --- Load Folders/Notes ---
 const foldersDiv = document.getElementById('folders');
 let currentPath = '';
 let notesTree = {};
 let saveTimeout = null;
+let expandedFolders = new Set(); // Track which folders are expanded
+let selectedFolder = null; // Track the currently selected folder
 
 function renderFolders(folder, basePath = '') {
-  let html = `<div class='folder'><b>${folder.name}</b></div>`;
-  if (folder.notes && folder.notes.length > 0) {
-    html += '<ul>';
-    folder.notes.forEach(note => {
-      const noteName = note.name;
-      const modifiedDate = new Date(note.modified).toLocaleDateString();
-      html += `<li><a href='#' data-path='${note.name}' title='Modified: ${modifiedDate}'>${noteName}</a></li>`;
-    });
-    html += '</ul>';
+  const folderPath = basePath ? `${basePath}/${folder.name}` : folder.name;
+  const isExpanded = expandedFolders.has(folderPath);
+  const hasContent = (folder.notes && folder.notes.length > 0) || (folder.subfolders && folder.subfolders.length > 0);
+  const isSelected = selectedFolder === folderPath;
+  
+  let html = '';
+  
+  // Only show folder header if it's not the root folder or if it has content
+  if (folder.name !== 'ASAPNotes' || hasContent) {
+    const folderIcon = hasContent ? (isExpanded ? '📂' : '📁') : '📁';
+    const expandIcon = hasContent ? (isExpanded ? '▼' : '▶') : '';
+    const selectedClass = isSelected ? ' selected' : '';
+    
+    html += `<div class='folder-header${selectedClass}' data-folder-path='${folderPath}'>`;
+    html += `<span class='folder-toggle' data-folder-path='${folderPath}'>${expandIcon}</span>`;
+    html += `<span class='folder-icon'>${folderIcon}</span>`;
+    html += `<span class='folder-name'>${folder.name}</span>`;
+    html += '</div>';
   }
-  if (folder.subfolders) {
-    html += folder.subfolders.map(sub => `<div class='subfolder'>${renderFolders(sub, sub.path)}</div>`).join('');
+  
+  // Show content if folder is expanded or if it's the root folder
+  if (isExpanded || folder.name === 'ASAPNotes') {
+    html += '<div class="folder-content">';
+    
+    // Render notes
+    if (folder.notes && folder.notes.length > 0) {
+      html += '<ul class="notes-list">';
+      folder.notes.forEach(note => {
+        const noteName = note.name;
+        const notePath = basePath ? `${basePath}/${note.name}` : note.name;
+        const modifiedDate = new Date(note.modified).toLocaleDateString();
+        html += `<li><a href='#' data-path='${notePath}' title='Modified: ${modifiedDate}'>📄 ${noteName}</a></li>`;
+      });
+      html += '</ul>';
+    }
+    
+    // Render subfolders
+    if (folder.subfolders && folder.subfolders.length > 0) {
+      folder.subfolders.forEach(sub => {
+        html += `<div class='subfolder'>${renderFolders(sub, folderPath)}</div>`;
+      });
+    }
+    
+    html += '</div>';
   }
+  
   return html;
 }
 
@@ -101,7 +425,65 @@ function loadFolders() {
   fetch('/api/folders').then(r => r.json()).then(tree => {
     notesTree = tree;
     foldersDiv.innerHTML = renderFolders(tree);
+    
+    // Add event listeners for folder toggles
+    addFolderToggleListeners();
   });
+}
+
+function addFolderToggleListeners() {
+  // Add click handlers for folder toggles
+  document.querySelectorAll('.folder-toggle').forEach(toggle => {
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const folderPath = toggle.dataset.folderPath;
+      toggleFolder(folderPath);
+    });
+  });
+  
+  // Add click handlers for folder headers (to expand/collapse and select)
+  document.querySelectorAll('.folder-header').forEach(header => {
+    header.addEventListener('click', (e) => {
+      if (e.target.classList.contains('folder-toggle')) return; // Skip if clicking toggle
+      const folderPath = header.dataset.folderPath;
+      
+      // Select the folder
+      selectedFolder = folderPath;
+      updateCurrentFolderDisplay();
+      
+      // Toggle expansion if the folder has content
+      const hasContent = header.querySelector('.folder-toggle').textContent !== '';
+      if (hasContent) {
+        toggleFolder(folderPath);
+      } else {
+        // Just re-render to show selection
+        foldersDiv.innerHTML = renderFolders(notesTree);
+        addFolderToggleListeners();
+      }
+    });
+  });
+}
+
+function updateCurrentFolderDisplay() {
+  const currentFolderDiv = document.getElementById('current-folder');
+  if (selectedFolder) {
+    currentFolderDiv.textContent = `📁 ${selectedFolder}`;
+    currentFolderDiv.style.display = 'block';
+  } else {
+    currentFolderDiv.style.display = 'none';
+  }
+}
+
+function toggleFolder(folderPath) {
+  if (expandedFolders.has(folderPath)) {
+    expandedFolders.delete(folderPath);
+  } else {
+    expandedFolders.add(folderPath);
+  }
+  
+  // Re-render the folders to show the updated state
+  foldersDiv.innerHTML = renderFolders(notesTree);
+  addFolderToggleListeners();
 }
 
 foldersDiv.onclick = (e) => {
@@ -146,68 +528,82 @@ function autoSave() {
 
 // --- Markdown Preview ---
 const preview = document.getElementById('preview');
+function renderPreview() {
+  preview.innerHTML = markdownToHtml(editor.value);
+}
 editor.addEventListener('input', () => {
   renderPreview();
   autoSave(); // Trigger auto-save on every input
 });
 
-function renderPreview() {
-  preview.innerHTML = markdownToHtml(editor.value);
-}
-
 function markdownToHtml(md) {
   // Enhanced Markdown: headings, bold, italics, code, links, lists, images, code blocks, blockquotes, tables, strikethrough, task lists
-  
-  let html = md
-    // Headings
-    .replace(/^###### (.*$)/gim, '<h6>$1</h6>')
-    .replace(/^##### (.*$)/gim, '<h5>$1</h5>')
-    .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    
-    // Code blocks (```code```)
-    .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
-    
-    // Blockquotes
-    .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
-    
-    // Tables (basic support)
-    .replace(/\|(.+)\|/g, function(match, content) {
-      const cells = content.split('|').map(cell => cell.trim());
-      return '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
-    })
-    .replace(/(<tr>.*<\/tr>)/g, '<table>$1</table>')
-    
-    // Images
-    .replace(/!\[(.*?)\]\((.*?)\)/gim, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;">')
-    
-    // Links
-    .replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank">$1</a>')
-    
-    // Text formatting
-    .replace(/\*\*(.*?)\*\*/gim, '<b>$1</b>')
-    .replace(/\*(.*?)\*/gim, '<i>$1</i>')
-    .replace(/~~(.*?)~~/gim, '<del>$1</del>')
-    .replace(/`([^`]+)`/gim, '<code>$1</code>')
-    
-    // Task lists
-    .replace(/^\s*- \[([ x])\] (.*)$/gim, '<div class="task-item"><input type="checkbox" $1 disabled> $2</div>')
-    
-    // Lists
-    .replace(/^\s*[-*+] (.*)$/gim, '<li>$1</li>')
-    
-    // Paragraphs
-    .replace(/\n{2,}/g, '</p><p>');
-  
-  html = '<p>' + html + '</p>';
-  html = html.replace(/<p><\/p>/g, '');
-  
+
+  // Step 1: Extract code blocks (fenced with ```)
+  const codeBlocks = [];
+  md = md.replace(/```([\s\S]*?)```/g, function(match, code) {
+    codeBlocks.push(code);
+    return `{{CODEBLOCK_${codeBlocks.length - 1}}}`;
+  });
+
+  // Step 2: Split into blocks by double newlines
+  const blocks = md.split(/\n{2,}/);
+  const htmlBlocks = blocks.map(block => {
+    // Restore code blocks
+    if (/\{\{CODEBLOCK_(\d+)\}\}/.test(block)) {
+      return block.replace(/\{\{CODEBLOCK_(\d+)\}\}/g, function(_, idx) {
+        return `<pre><code>${codeBlocks[idx].replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`;
+      });
+    }
+    // If block starts with a block element, don't wrap in <p> or add <br>
+    if (/^(\s*#|\s*>|\s*([-*+] |\d+\. )|\s*- \[[ xX]\]|\s*\|)/.test(block)) {
+      return block
+        // Headings
+        .replace(/^###### (.*$)/gim, '<h6>$1</h6>')
+        .replace(/^##### (.*$)/gim, '<h5>$1</h5>')
+        .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        // Blockquotes
+        .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
+        // Tables
+        .replace(/\|(.+)\|/g, function(match, content) {
+          const cells = content.split('|').map(cell => cell.trim());
+          return '<tr>' + cells.map(cell => `<td>${cell}</td>`).join('') + '</tr>';
+        })
+        .replace(/(<tr>.*<\/tr>)/g, '<table>$1</table>')
+        // Images
+        .replace(/!\[(.*?)\]\((.*?)\)/gim, '<img src="$2" alt="$1" style="max-width: 100%; height: auto;">')
+        // Links
+        .replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank">$1</a>')
+        // Text formatting
+        .replace(/\*\*(.*?)\*\*/gim, '<b>$1</b>')
+        .replace(/\*(.*?)\*/gim, '<i>$1</i>')
+        .replace(/~~(.*?)~~/gim, '<del>$1</del>')
+        .replace(/`([^`]+)`/gim, '<code>$1</code>')
+        // Task lists
+        .replace(/^\s*- \[([ xX])\] (.*)$/gim, '<div class="task-item"><input type="checkbox" $1 disabled> $2</div>')
+        // Lists
+        .replace(/^\s*[-*+] (.*)$/gim, '<li>$1</li>');
+    } else {
+      // Otherwise, treat as paragraph and convert single newlines to <br>
+      return '<p>' + block
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>')
+        .replace(/\s{2,}/g, ' ')
+        + '</p>';
+    }
+  });
+
+  let html = htmlBlocks.join('');
+
   // Clean up table structure
   html = html.replace(/<table><tr>/g, '<table><tbody><tr>');
   html = html.replace(/<\/tr><\/table>/g, '</tr></tbody></table>');
-  
+
   return html;
 }
 
@@ -255,7 +651,10 @@ newNoteBtn.onclick = function() {
   name = name.replace(/[^a-zA-Z0-9 _\-\.]/g, '').trim();
   if (!name) return alert('Invalid name.');
   
-  const path = `${name}`;
+  // Get current folder context from selected folder or use root
+  const currentFolder = getCurrentFolderContext();
+  const path = currentFolder ? `${currentFolder}/${name}` : name;
+  
   fetch(`/api/note?path=${encodeURIComponent(path)}`, {
     method: 'POST',
     body: ''
@@ -264,6 +663,46 @@ newNoteBtn.onclick = function() {
     loadNote(path);
   });
 };
+
+// --- New Folder Button ---
+const newFolderBtn = document.getElementById('new-folder');
+newFolderBtn.onclick = function() {
+  let name = prompt('Enter new folder name:');
+  if (!name) return;
+  name = name.trim();
+  
+  // Validate folder name
+  name = name.replace(/[^a-zA-Z0-9 _\-]/g, '').trim();
+  if (!name) return alert('Invalid folder name.');
+  
+  // Get current folder context
+  const currentFolder = getCurrentFolderContext();
+  const folderPath = currentFolder ? `${currentFolder}/${name}` : name;
+  
+  // Create the folder
+  fetch(`/api/folder?path=${encodeURIComponent(folderPath)}`, {
+    method: 'POST'
+  }).then(response => {
+    if (response.ok) {
+      loadFolders();
+      // Expand the parent folder to show the new folder
+      if (currentFolder) {
+        expandedFolders.add(currentFolder);
+      }
+    } else {
+      alert('Failed to create folder');
+    }
+  }).catch(() => {
+    alert('Failed to create folder');
+  });
+};
+
+// Helper function to get current folder context
+function getCurrentFolderContext() {
+  // Check if there's a selected folder (could be enhanced with selection tracking)
+  // For now, return null (root folder)
+  return selectedFolder;
+}
 
 // --- Close App Button ---
 const closeAppBtn = document.getElementById('close-app');
@@ -285,6 +724,22 @@ closeAppBtn.onclick = function() {
 };
 
 // --- Initialize ---
+// Apply default font settings immediately
+applyFontSettings('monospace', '16');
+
+// Also ensure font settings are applied when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  applyFontSettings('monospace', '16');
+  
+  // Fallback: populate font selector if it's still empty after 2 seconds
+  setTimeout(() => {
+    if (fontFamilySelect && fontFamilySelect.children.length <= 1) {
+      console.log('Fallback: populating font selector');
+      populateFontSelector();
+    }
+  }, 2000);
+});
+
 loadSettings();
 
 // --- Resizable Panels ---

@@ -27,6 +27,7 @@ A lightweight, Markdown-first note-taking desktop application built in Go with a
 
 ### 🎨 **User Experience**
 - **Dark/Light Mode**: Toggle between themes with one click
+- **Customizable Fonts**: Choose from multiple font families and sizes for optimal readability
 - **Distraction-Free**: Clean, minimal interface
 - **Cross-Platform**: Works on macOS, Windows, and Linux
 - **Lightweight**: No external dependencies, fast startup
@@ -39,6 +40,13 @@ A lightweight, Markdown-first note-taking desktop application built in Go with a
 - **Background Operation**: Runs silently without dock icon (macOS)
 - **Graceful Shutdown**: Saves all changes before closing
 - **File Sorting**: Notes sorted by modification time (most recent first)
+
+### 🔤 **Font Customization**
+- **Multiple Font Families**: Choose from monospace, sans-serif, and serif fonts
+- **Popular Programming Fonts**: Includes Fira Code, JetBrains Mono, Consolas, and more
+- **Adjustable Font Sizes**: Range from 12px to 24px for optimal readability
+- **Real-Time Preview**: See font changes immediately in both editor and preview
+- **Persistent Settings**: Font preferences are saved and restored between sessions
 
 ## 🚀 Quick Start
 
