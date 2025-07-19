@@ -80,22 +80,22 @@ function loadSettings() {
     // Update the notes folder input in the modal
     document.getElementById('notes-folder').value = settings.notes_folder || '';
     
-    // Populate font selector with available fonts
-    setTimeout(() => {
-      populateFontSelector();
+        // Populate font selector with available fonts
+    setTimeout(async () => {
+      await populateFontSelector();
       
-          // Update font settings after populating selector
-    setTimeout(() => {
-      document.getElementById('font-family').value = settings.font_family || 'monospace';
-      document.getElementById('font-size').value = settings.font_size || '16';
-      // Apply font settings
-      applyFontSettings(settings.font_family || 'monospace', settings.font_size || '16');
-      
-      // Also apply again after a longer delay to ensure everything is loaded
+      // Update font settings after populating selector
       setTimeout(() => {
+        document.getElementById('font-family').value = settings.font_family || 'monospace';
+        document.getElementById('font-size').value = settings.font_size || '16';
+        // Apply font settings
         applyFontSettings(settings.font_family || 'monospace', settings.font_size || '16');
-      }, 500);
-    }, 200);
+        
+        // Also apply again after a longer delay to ensure everything is loaded
+        setTimeout(() => {
+          applyFontSettings(settings.font_family || 'monospace', settings.font_size || '16');
+        }, 500);
+      }, 200);
     }, 100);
     
     // Load folders after settings are loaded
@@ -183,96 +183,44 @@ if (fontSizeSelect) {
 }
 
 // Font detection and population
-function populateFontSelector() {
+async function populateFontSelector() {
   console.log('Starting font population...');
   
   if (!fontFamilySelect) {
     console.error('Font family select element not found');
     return;
   }
-  
-  // List of fonts to test, ordered by preference
-  const fontsToTest = [
-    { name: 'Monospace', value: 'monospace' },
-    { name: 'Menlo', value: "'Menlo', monospace" },
-    { name: 'Monaco', value: "'Monaco', monospace" },
-    { name: 'SF Mono', value: "'SF Mono', monospace" },
-    { name: 'Courier New', value: "'Courier New', monospace" },
-    { name: 'Consolas', value: "'Consolas', monospace" },
-    { name: 'Fira Code', value: "'Fira Code', monospace" },
-    { name: 'JetBrains Mono', value: "'JetBrains Mono', monospace" },
-    { name: 'Source Code Pro', value: "'Source Code Pro', monospace" },
-    { name: 'Ubuntu Mono', value: "'Ubuntu Mono', monospace" },
-    { name: 'DejaVu Sans Mono', value: "'DejaVu Sans Mono', monospace" },
-    { name: 'Inconsolata', value: "'Inconsolata', monospace" },
-    { name: 'Sans-serif', value: 'sans-serif' },
-    { name: 'SF Pro Display', value: "'SF Pro Display', sans-serif" },
-    { name: 'Helvetica Neue', value: "'Helvetica Neue', sans-serif" },
-    { name: 'Arial', value: "'Arial', sans-serif" },
-    { name: 'Helvetica', value: "'Helvetica', sans-serif" },
-    { name: 'Segoe UI', value: "'Segoe UI', sans-serif" },
-    { name: 'Serif', value: 'serif' },
-    { name: 'Times New Roman', value: "'Times New Roman', serif" },
-    { name: 'Georgia', value: "'Georgia', serif" }
-  ];
 
   // Clear existing options
   fontFamilySelect.innerHTML = '';
 
   try {
-    // Test each font and add if available
-    fontsToTest.forEach(font => {
-      try {
-        if (isFontAvailable(font.value)) {
-          const option = document.createElement('option');
-          option.value = font.value;
-          option.textContent = font.name;
-          option.style.fontFamily = font.value;
-          fontFamilySelect.appendChild(option);
-          console.log('Font available:', font.name);
-        } else {
-          console.log('Font not available:', font.name);
-        }
-      } catch (e) {
-        console.log('Error testing font:', font.name, e);
-      }
-    });
-
-      // Always add basic fallbacks first
-  const fallbacks = [
-    { name: 'Monospace', value: 'monospace' },
-    { name: 'Sans-serif', value: 'sans-serif' },
-    { name: 'Serif', value: 'serif' }
-  ];
-  
-  // If no fonts were detected, add fallbacks
-  if (fontFamilySelect.children.length === 0) {
-    console.log('No fonts detected, adding fallbacks');
-    fallbacks.forEach(font => {
+    // Get system fonts using FontFace API
+    const systemFonts = await getSystemFonts();
+    console.log('Found', systemFonts.length, 'system fonts');
+    
+    // Add generic font families first
+    const genericFonts = [
+      { name: 'Monospace', value: 'monospace' },
+      { name: 'Sans-serif', value: 'sans-serif' },
+      { name: 'Serif', value: 'serif' }
+    ];
+    
+    genericFonts.forEach(font => {
       const option = document.createElement('option');
       option.value = font.value;
       option.textContent = font.name;
       fontFamilySelect.appendChild(option);
     });
-  }
-  
-  // Ensure we have at least the basic fonts
-  const hasMonospace = Array.from(fontFamilySelect.children).some(opt => opt.value === 'monospace');
-  const hasSansSerif = Array.from(fontFamilySelect.children).some(opt => opt.value === 'sans-serif');
-  const hasSerif = Array.from(fontFamilySelect.children).some(opt => opt.value === 'serif');
-  
-  if (!hasMonospace || !hasSansSerif || !hasSerif) {
-    console.log('Adding missing basic fonts');
-    fallbacks.forEach(font => {
-      const exists = Array.from(fontFamilySelect.children).some(opt => opt.value === font.value);
-      if (!exists) {
-        const option = document.createElement('option');
-        option.value = font.value;
-        option.textContent = font.name;
-        fontFamilySelect.appendChild(option);
-      }
+    
+    // Add detected system fonts
+    systemFonts.forEach(font => {
+      const option = document.createElement('option');
+      option.value = font.value;
+      option.textContent = font.name;
+      option.style.fontFamily = font.value;
+      fontFamilySelect.appendChild(option);
     });
-  }
     
     console.log('Font population complete. Found', fontFamilySelect.children.length, 'fonts');
   } catch (e) {
@@ -292,28 +240,117 @@ function populateFontSelector() {
   }
 }
 
-function isFontAvailable(fontFamily) {
+// Get all system fonts
+async function getSystemFonts() {
+  const fonts = [];
+  
+  // Common font names to test (this is just a starting point)
+  const commonFontNames = [
+    // Monospace fonts
+    'Comic Code', 'Menlo', 'Monaco', 'SF Mono', 'Courier New', 'Consolas', 'Fira Code', 
+    'JetBrains Mono', 'Source Code Pro', 'Ubuntu Mono', 'DejaVu Sans Mono', 'Inconsolata',
+    'Cascadia Code', 'Victor Mono', 'Operator Mono', 'Dank Mono', 'Hack', 'Roboto Mono',
+    'Space Mono', 'IBM Plex Mono', 'Anonymous Pro', 'Liberation Mono', 'PT Mono',
+    
+    // Sans-serif fonts
+    'SF Pro Display', 'Helvetica Neue', 'Arial', 'Helvetica', 'Segoe UI', 'Roboto',
+    'Open Sans', 'Lato', 'Source Sans Pro', 'Ubuntu', 'Noto Sans', 'Inter', 'Poppins',
+    'Montserrat', 'Raleway', 'Nunito', 'Work Sans', 'Quicksand', 'Rubik', 'DM Sans',
+    
+    // Serif fonts
+    'Times New Roman', 'Georgia', 'Palatino', 'Garamond', 'Baskerville', 'Didot',
+    'Playfair Display', 'Merriweather', 'Lora', 'Source Serif Pro', 'Crimson Text',
+    'Libre Baskerville', 'PT Serif', 'Noto Serif', 'EB Garamond', 'Alegreya',
+    
+    // macOS specific fonts
+    'SF Pro', 'SF Pro Text', 'SF Mono', 'New York', 'Chalkboard', 'Geneva',
+    'Lucida Grande', 'Lucida Sans', 'Optima', 'Palatino', 'Verdana', 'Trebuchet MS',
+    
+    // Windows specific fonts
+    'Calibri', 'Cambria', 'Candara', 'Constantia', 'Corbel', 'Georgia', 'Impact',
+    'Tahoma', 'Verdana', 'Webdings', 'Wingdings', 'Wingdings 2', 'Wingdings 3',
+    
+    // Linux specific fonts
+    'DejaVu Sans', 'DejaVu Serif', 'Liberation Sans', 'Liberation Serif',
+    'Ubuntu', 'Ubuntu Condensed', 'Ubuntu Mono', 'Noto Sans', 'Noto Serif'
+  ];
+  
+  // Test each font name
+  for (const fontName of commonFontNames) {
+    try {
+      if (await isFontAvailable(fontName)) {
+        fonts.push({
+          name: fontName,
+          value: `'${fontName}', ${getFontCategory(fontName)}`
+        });
+        console.log('Font available:', fontName);
+      }
+    } catch (e) {
+      console.log('Error testing font:', fontName, e);
+    }
+  }
+  
+  // Sort fonts by category and name
+  fonts.sort((a, b) => {
+    const categoryA = getFontCategory(a.name);
+    const categoryB = getFontCategory(b.name);
+    
+    if (categoryA !== categoryB) {
+      // Order: monospace, sans-serif, serif
+      const order = { 'monospace': 0, 'sans-serif': 1, 'serif': 2 };
+      return order[categoryA] - order[categoryB];
+    }
+    
+    return a.name.localeCompare(b.name);
+  });
+  
+  return fonts;
+}
+
+// Determine font category
+function getFontCategory(fontName) {
+  const monospaceFonts = [
+    'Comic Code', 'Menlo', 'Monaco', 'SF Mono', 'Courier New', 'Consolas', 'Fira Code',
+    'JetBrains Mono', 'Source Code Pro', 'Ubuntu Mono', 'DejaVu Sans Mono', 'Inconsolata',
+    'Cascadia Code', 'Victor Mono', 'Operator Mono', 'Dank Mono', 'Hack', 'Roboto Mono',
+    'Space Mono', 'IBM Plex Mono', 'Anonymous Pro', 'Liberation Mono', 'PT Mono'
+  ];
+  
+  const serifFonts = [
+    'Times New Roman', 'Georgia', 'Palatino', 'Garamond', 'Baskerville', 'Didot',
+    'Playfair Display', 'Merriweather', 'Lora', 'Source Serif Pro', 'Crimson Text',
+    'Libre Baskerville', 'PT Serif', 'Noto Serif', 'EB Garamond', 'Alegreya',
+    'DejaVu Serif', 'Liberation Serif'
+  ];
+  
+  if (monospaceFonts.includes(fontName)) {
+    return 'monospace';
+  } else if (serifFonts.includes(fontName)) {
+    return 'serif';
+  } else {
+    return 'sans-serif';
+  }
+}
+
+async function isFontAvailable(fontName) {
   try {
     // For generic font families, always return true
-    if (fontFamily === 'monospace' || fontFamily === 'sans-serif' || fontFamily === 'serif') {
+    if (fontName === 'monospace' || fontName === 'sans-serif' || fontName === 'serif') {
       return true;
     }
     
-    // For macOS, include common system fonts
-    const commonFonts = [
-      'Menlo', 'Monaco', 'SF Mono', 'SF Pro Display', 'Helvetica Neue', 'Arial', 'Times New Roman',
-      'Georgia', 'Courier New', 'Consolas', 'Segoe UI'
-    ];
-    
-    // Extract the actual font name (remove quotes and fallbacks)
-    const fontName = fontFamily.replace(/['"]/g, '').split(',')[0].trim();
-    
-    // If it's a common font, assume it's available
-    if (commonFonts.includes(fontName)) {
-      return true;
+    // Try using FontFace API first (more reliable)
+    if (typeof FontFace !== 'undefined') {
+      try {
+        const fontFace = new FontFace(fontName, 'normal');
+        await fontFace.load();
+        return true;
+      } catch (e) {
+        // FontFace failed, try canvas method
+      }
     }
     
-    // For other fonts, use canvas detection
+    // Fallback to canvas detection
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     
@@ -325,7 +362,7 @@ function isFontAvailable(fontFamily) {
     const initialWidth = context.measureText(testString).width;
     
     // Set test font
-    context.font = `12px ${fontFamily}`;
+    context.font = `12px "${fontName}"`;
     const testWidth = context.measureText(testString).width;
     
     // If the width is different, the font is available
@@ -333,7 +370,7 @@ function isFontAvailable(fontFamily) {
     
     return isDifferent;
   } catch (e) {
-    console.log('Error in isFontAvailable for', fontFamily, ':', e);
+    console.log('Error in isFontAvailable for', fontName, ':', e);
     // If there's an error, assume the font is available to be safe
     return true;
   }
@@ -732,10 +769,10 @@ document.addEventListener('DOMContentLoaded', () => {
   applyFontSettings('monospace', '16');
   
   // Fallback: populate font selector if it's still empty after 2 seconds
-  setTimeout(() => {
+  setTimeout(async () => {
     if (fontFamilySelect && fontFamilySelect.children.length <= 1) {
       console.log('Fallback: populating font selector');
-      populateFontSelector();
+      await populateFontSelector();
     }
   }, 2000);
 });
