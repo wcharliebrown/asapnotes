@@ -458,7 +458,8 @@ let expandedFolders = new Set(); // Track which folders are expanded
 let selectedFolder = null; // Track the currently selected folder
 
 function renderFolders(folder, basePath = '') {
-  const folderPath = basePath ? `${basePath}/${folder.name}` : folder.name;
+  // Use the folder's path from the backend, or construct from basePath and folder name
+  const folderPath = folder.path || (basePath ? `${basePath}/${folder.name}` : folder.name);
   const isExpanded = expandedFolders.has(folderPath);
   const hasContent = (folder.notes && folder.notes.length > 0) || (folder.subfolders && folder.subfolders.length > 0);
   const isSelected = selectedFolder === folderPath;
@@ -466,7 +467,7 @@ function renderFolders(folder, basePath = '') {
   let html = '';
   
   // Only show folder header if it's not the root folder or if it has content
-  if (folder.name !== 'ASAPNotes' || hasContent) {
+  if (folder.name !== notesTree.name || hasContent) {
     const folderIcon = hasContent ? (isExpanded ? '📂' : '📁') : '📁';
     const expandIcon = hasContent ? (isExpanded ? '▼' : '▶') : '';
     const selectedClass = isSelected ? ' selected' : '';
@@ -479,7 +480,7 @@ function renderFolders(folder, basePath = '') {
   }
   
   // Show content if folder is expanded or if it's the root folder
-  if (isExpanded || folder.name === 'ASAPNotes') {
+  if (isExpanded || folder.name === 'Root') {
     html += '<div class="folder-content">';
     
     // Render notes
@@ -487,7 +488,8 @@ function renderFolders(folder, basePath = '') {
       html += '<ul class="notes-list">';
       folder.notes.forEach(note => {
         const noteName = note.name;
-        const notePath = basePath ? `${basePath}/${note.name}` : note.name;
+        const notePath = folderPath ? `${folderPath}/${note.name}` : note.name;
+        console.log(`Rendering note: ${noteName} with path: ${notePath} (folderPath: ${folderPath})`);
         const modifiedDate = new Date(note.modified).toLocaleDateString();
         html += `<li><a href='#' data-path='${notePath}' title='Modified: ${modifiedDate}'>📄 ${noteName}</a></li>`;
       });
@@ -575,7 +577,10 @@ function toggleFolder(folderPath) {
 foldersDiv.onclick = (e) => {
   if (e.target.tagName === 'A') {
     e.preventDefault();
-    loadNote(e.target.dataset.path);
+    const path = e.target.dataset.path;
+    console.log('Clicking on file with path:', path);
+    console.log('File element:', e.target);
+    loadNote(path);
   }
 };
 
@@ -584,11 +589,25 @@ const editor = document.getElementById('editor');
 let currentNotePath = '';
 
 function loadNote(path) {
+  console.log('Loading note with path:', path);
   fetch(`/api/note?path=${encodeURIComponent(path)}`)
-    .then(r => r.text())
+    .then(r => {
+      console.log('Response status:', r.status);
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      }
+      return r.text();
+    })
     .then(text => {
+      console.log('Note content loaded, length:', text.length);
       editor.value = text;
       currentNotePath = path;
+      renderPreview();
+    })
+    .catch(error => {
+      console.error('Error loading note:', error);
+      editor.value = `Error loading note: ${error.message}`;
+      currentNotePath = '';
       renderPreview();
     });
 }

@@ -253,7 +253,20 @@ type NoteInfo struct {
 }
 
 func walkFolders(root string) (Folder, error) {
-	folder := Folder{Name: filepath.Base(root), Path: root}
+	// For the root folder, use a generic name and store the relative path
+	var folderName string
+	var folderPath string
+	
+	if root == settings.NotesFolder {
+		folderName = "Root"
+		folderPath = ""
+	} else {
+		folderName = filepath.Base(root)
+		relPath, _ := filepath.Rel(settings.NotesFolder, root)
+		folderPath = relPath
+	}
+	
+	folder := Folder{Name: folderName, Path: folderPath}
 	entries, err := ioutil.ReadDir(root)
 	if err != nil {
 		return folder, err
@@ -289,28 +302,79 @@ func walkFolders(root string) (Folder, error) {
 // handleNote loads or saves a note
 func handleNote(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
-	if !filepath.IsAbs(path) {
-		path = filepath.Join(settings.NotesFolder, path)
+	log.Printf("handleNote called with path: %s", path)
+	
+	if path == "" {
+		log.Printf("Path parameter is empty")
+		w.WriteHeader(400)
+		w.Write([]byte("Path parameter is required"))
+		return
 	}
+	
+	// Clean the path to handle any path separators properly
+	path = filepath.Clean(path)
+	log.Printf("Cleaned path: %s", path)
+	
+	// Ensure the path is relative to the notes folder
+	if filepath.IsAbs(path) {
+		log.Printf("Path is absolute, rejecting: %s", path)
+		w.WriteHeader(400)
+		w.Write([]byte("Path must be relative to notes folder"))
+		return
+	}
+	
+	// Join with notes folder to get full path
+	fullPath := filepath.Join(settings.NotesFolder, path)
+	log.Printf("Full path: %s", fullPath)
+	log.Printf("Notes folder: %s", settings.NotesFolder)
+	
+	// Security check: ensure the resolved path is within the notes folder
+	notesFolderAbs, _ := filepath.Abs(settings.NotesFolder)
+	fullPathAbs, _ := filepath.Abs(fullPath)
+	log.Printf("Notes folder absolute: %s", notesFolderAbs)
+	log.Printf("Full path absolute: %s", fullPathAbs)
+	
+	if !strings.HasPrefix(fullPathAbs, notesFolderAbs) {
+		log.Printf("Security check failed: %s is not within %s", fullPathAbs, notesFolderAbs)
+		w.WriteHeader(403)
+		w.Write([]byte("Access denied"))
+		return
+	}
+	
 	if r.Method == "GET" {
-		data, err := ioutil.ReadFile(path)
+		log.Printf("Attempting to read file: %s", fullPath)
+		data, err := ioutil.ReadFile(fullPath)
 		if err != nil {
+			log.Printf("Error reading file: %v", err)
 			w.WriteHeader(404)
 			w.Write([]byte("Note not found."))
 			return
 		}
+		log.Printf("Successfully read file, size: %d bytes", len(data))
 		w.Write(data)
 	} else if r.Method == "POST" {
+		// Ensure the directory exists
+		dir := filepath.Dir(fullPath)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			log.Printf("Error creating directory: %v", err)
+			w.WriteHeader(500)
+			w.Write([]byte("Failed to create directory"))
+			return
+		}
+		
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(400)
 			return
 		}
-		err = ioutil.WriteFile(path, body, 0644)
+		err = ioutil.WriteFile(fullPath, body, 0644)
 		if err != nil {
+			log.Printf("Error writing file: %v", err)
 			w.WriteHeader(500)
+			w.Write([]byte("Failed to save note"))
 			return
 		}
+		log.Printf("Successfully wrote file: %s", fullPath)
 		w.Write([]byte("OK"))
 	}
 }
