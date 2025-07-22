@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -46,7 +46,7 @@ func init() {
 }
 
 func loadSettings() {
-	data, err := ioutil.ReadFile(configPath)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		// Default settings
 		homeDir, _ := os.UserHomeDir()
@@ -69,7 +69,7 @@ func loadSettings() {
 
 func saveSettings() {
 	data, _ := json.MarshalIndent(settings, "", "  ")
-	ioutil.WriteFile(configPath, data, 0644)
+	os.WriteFile(configPath, data, 0644)
 }
 
 func main() {
@@ -182,7 +182,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 		indexPath = filepath.Join(appDir, "Contents", "Resources", "web", "static", "index.html")
 	}
 	
-	data, err := ioutil.ReadFile(indexPath)
+	data, err := os.ReadFile(indexPath)
 	if err != nil {
 		w.WriteHeader(500)
 		w.Write([]byte("Index file not found."))
@@ -267,7 +267,7 @@ func walkFolders(root string) (Folder, error) {
 	}
 	
 	folder := Folder{Name: folderName, Path: folderPath}
-	entries, err := ioutil.ReadDir(root)
+	entries, err := os.ReadDir(root)
 	if err != nil {
 		return folder, err
 	}
@@ -282,10 +282,13 @@ func walkFolders(root string) (Folder, error) {
 				subfolders = append(subfolders, sub)
 			}
 		} else if strings.HasSuffix(entry.Name(), ".md") || strings.HasSuffix(entry.Name(), ".txt") {
-			notes = append(notes, NoteInfo{
-				Name: entry.Name(),
-				Modified: entry.ModTime(),
-			})
+			info, err := entry.Info()
+			if err == nil {
+				notes = append(notes, NoteInfo{
+					Name: entry.Name(),
+					Modified: info.ModTime(),
+				})
+			}
 		}
 	}
 	
@@ -343,7 +346,7 @@ func handleNote(w http.ResponseWriter, r *http.Request) {
 	
 	if r.Method == "GET" {
 		log.Printf("Attempting to read file: %s", fullPath)
-		data, err := ioutil.ReadFile(fullPath)
+		data, err := os.ReadFile(fullPath)
 		if err != nil {
 			log.Printf("Error reading file: %v", err)
 			w.WriteHeader(404)
@@ -362,12 +365,12 @@ func handleNote(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(400)
 			return
 		}
-		err = ioutil.WriteFile(fullPath, body, 0644)
+		err = os.WriteFile(fullPath, body, 0644)
 		if err != nil {
 			log.Printf("Error writing file: %v", err)
 			w.WriteHeader(500)
@@ -421,7 +424,7 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 		if err != nil || info.IsDir() || (!strings.HasSuffix(info.Name(), ".md") && !strings.HasSuffix(info.Name(), ".txt")) {
 			return nil
 		}
-		data, err := ioutil.ReadFile(path)
+		data, err := os.ReadFile(path)
 		if err == nil && strings.Contains(strings.ToLower(string(data)), strings.ToLower(query)) {
 			// Return relative path from notes folder
 			relPath, _ := filepath.Rel(settings.NotesFolder, path)
