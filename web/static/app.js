@@ -586,6 +586,12 @@ foldersDiv.onclick = (e) => {
 
 // --- Load/Save Note with Auto-save ---
 const editor = document.getElementById('editor');
+console.log(typeof applyFontSettings);
+editor.addEventListener('input', () => {
+  console.log('Editor input event fired');
+  renderPreview();
+  autoSave();
+});
 let currentNotePath = '';
 
 function loadNote(path) {
@@ -636,10 +642,6 @@ const preview = document.getElementById('preview');
 function renderPreview() {
   preview.innerHTML = markdownToHtml(editor.value);
 }
-editor.addEventListener('input', () => {
-  renderPreview();
-  autoSave(); // Trigger auto-save on every input
-});
 
 function markdownToHtml(md) {
   // Enhanced Markdown: headings, bold, italics, code, links, lists, images, code blocks, blockquotes, tables, strikethrough, task lists
